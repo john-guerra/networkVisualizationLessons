@@ -56,6 +56,8 @@ var scrollVis = function() {
     .range([1.0, 0.3]);
 
 
+  // Currently visible nodes
+  var filteredNodes = [];
 
   // When scrolling to a new section
   // the activation function for that
@@ -141,8 +143,8 @@ var scrollVis = function() {
 
         context.beginPath();
         if (chart.drawLinks) {
-          graph.links.forEach(drawLink);
-          context.strokeStyle = 'rgba(200,200,200,0.1)';
+          simulation.force("link").links().forEach(drawLink);
+          context.strokeStyle = 'rgba(200,200,200,0.5)';
           context.lineWidth = 0.5;
           context.stroke();
         }
@@ -183,8 +185,8 @@ var scrollVis = function() {
       }
 
       function drawLink(d) {
-        context.moveTo(d.source.x, d.source.y);
-        context.lineTo(d.target.x, d.target.y);
+        context.moveTo(d.source.x+radius, d.source.y+radius);
+        context.lineTo(d.target.x+radius, d.target.y+radius);
       }
 
 
@@ -200,18 +202,18 @@ var scrollVis = function() {
           // If a node is in this list it will be grayed out
           if (grayingOutList &&
             grayingOutList[d.id]!==undefined) {
-            console.log("globalAlpha" + grayedLevel);
+            // console.log("globalAlpha" + grayedLevel);
             context.globalAlpha = grayedLevel;
-            console.log("globalAlpha");
-            console.log(context.globalAlpha);
+            // console.log("globalAlpha");
+            // console.log(context.globalAlpha);
           } else {
-             context.globalAlpha = 1;
-          }
-          if (grayedOutList &&
-            grayedOutList[d.id]!==undefined) {
-            context.globalAlpha = 0.3; //final value
-          } else {
-             context.globalAlpha = 1;
+            if (grayedOutList &&
+              grayedOutList[d.id]!==undefined) {
+              context.globalAlpha = 0.3; //final value
+            } else {
+               context.globalAlpha = 1;
+            }
+
           }
 
 
@@ -266,6 +268,12 @@ var scrollVis = function() {
         d.nodeImgData = this;
       }
     });
+
+
+    graph.links.forEach(function (d) {
+      d.sourceID = d.source;
+      d.targetID = d.target;
+    });
   };
 
   /**
@@ -276,7 +284,7 @@ var scrollVis = function() {
    *
    */
   var setupSections = function() {
-    var STEPS = 20;
+    var STEPS = 22;
 
     var nothingFn = function () {};
     // activateFunctions are called each
@@ -293,8 +301,9 @@ var scrollVis = function() {
     activateFunctions[8] = selectNeighborhood;
     activateFunctions[9] = rankByImportance;
 
-    activateFunctions[10] = showFillerTitle;
-    activateFunctions[11] = showFillerTitle;
+    activateFunctions[10] = showLinks;
+    // Compute clusters
+    activateFunctions[11] = showClusters;
     activateFunctions[12] = showAllNodes;
     activateFunctions[13] = showFillerTitle;
     activateFunctions[14] = showFillerTitle;
@@ -303,6 +312,9 @@ var scrollVis = function() {
     activateFunctions[17] = showFillerTitle;
     activateFunctions[18] = showFillerTitle;
     activateFunctions[19] = showFillerTitle;
+    activateFunctions[20] = showFillerTitle;
+    activateFunctions[21] = showFillerTitle;
+
 
     // updateFunctions are called while
     // in a particular section to update
@@ -317,6 +329,44 @@ var scrollVis = function() {
     updateFunctions[8] = updateGrayed;
   };
 
+
+function updateNodes(nodes) {
+    simulation.nodes(nodes);
+    clusters = d3.nest()
+      .key(function(d) { return d.cluster; })
+      .entries(nodes)
+      .sort(function(a, b) { return b.values.length - a.values.length; });
+
+    filteredNodes = nodes.slice(0);
+    console.log("Updated nodes count:" + filteredNodes.length);
+  }
+
+  /**
+  *  Shows only the links for the currently shown nodes
+  */
+  function updateLinks() {
+    var dictNodes = {},
+      allLinks = chart.graph.links,
+      filteredLinks = [];
+
+    filteredNodes.forEach(function (d) {
+      dictNodes[d.id] = d;
+    });
+
+    filteredLinks = allLinks.filter(function (d) {
+      return dictNodes[d.sourceID] !== undefined &&
+        dictNodes[d.targetID] !== undefined;
+    });
+
+
+    console.log("updating links, all links count: " + allLinks.length +  " filtered: " + filteredLinks.length);
+
+    simulation.force("link")
+          .links(filteredLinks);
+
+    console.log(simulation.links);
+
+  }
   /**
    * ACTIVATE FUNCTIONS
    *
@@ -331,14 +381,6 @@ var scrollVis = function() {
    * user may be scrolling up or down).
    *
    */
-
-  function updateNodes(nodes) {
-    simulation.nodes(nodes);
-    clusters = d3.nest()
-      .key(function(d) { return d.cluster; })
-      .entries(nodes)
-      .sort(function(a, b) { return b.values.length - a.values.length; });
-  }
 
   /**
    * showTitle - initial title
@@ -408,15 +450,16 @@ var scrollVis = function() {
     simulation.stop();
     chart.drawLinks = true;
 
-    updateNodes(chart.graph.nodes);
-    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.6))
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.8).distance(150))
           .force("charge", d3.forceManyBody().strength(-100));
-    simulation.force("link")
-          .links(chart.graph.links);
-    simulation.force("charge", function () {})
-          .force("x", d3.forceX(width/2).strength(0.1))
-          .force("y", d3.forceY(height/2).strength(0.1))
+
+    simulation
+          .force("x", function () {})
+          .force("y", function () {})
+          .force("center", d3.forceCenter(width/2, height/2))
           // .force("collide", function () {});
+
+    updateLinks();
 
     grayedOutList = {};
     grayingOutList = {};
@@ -443,7 +486,7 @@ var scrollVis = function() {
     chart.graph.nodes
       .filter(function (d) { return d.influential!== true; })
       .forEach(function (d) { grayingOutList[d.id]=d; });
-    grayedScale.range([1.0, 0.3]);
+    grayedScale.range([1.0, 0.1]);
 
     simulation.alphaTarget(0.1).restart();
   }
@@ -457,11 +500,11 @@ var scrollVis = function() {
     grayedOutList = grayingOutList;
     // Bring back 200 other nodes
     grayingOutList = {};
-    .filter(function (d) { return d.influential!== true; })
+    chart.graph.nodes.filter(function (d) { return d.influential!== true; })
     .slice(0,200)
     .forEach(function (d) { grayingOutList[d.id]=d; })
 
-    // grayedScale.range([0.3, 1.0]);
+    grayedScale.range([0.3, 1.0]);
 
 
     // Remove links
@@ -483,7 +526,7 @@ var scrollVis = function() {
     updateNodes(chart.graph.nodes
       .filter(function (d) {
         return d.influential ||
-          grayingOutList.indexOf(d.id) !==-1;
+          grayingOutList[d.id] !==undefined;
         }));
 
     // Remove links
@@ -497,11 +540,16 @@ var scrollVis = function() {
     simulation.alphaTarget(0.1).restart();
   }
 
+  function showClusters() {
+
+  }
+
+  // Update functions
   function updateGrayed(progress) {
 
     grayedLevel = grayedScale(progress);
-    simulation.restart();
-    console.log(progress + "," + grayedLevel);
+    // simulation.restart();
+    // console.log(progress + "," + grayedLevel);
   }
 
   /**
@@ -579,5 +627,5 @@ var display = function(mGraph) {
 };
 
 // load data and display
-d3.json("data/ieeevisNetwork.json", display);
+d3.json("data/ieeevisNetworkClustered.json", display);
 
