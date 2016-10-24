@@ -194,6 +194,7 @@ var scrollVis = function() {
         if (!d3.event.active) simulation.alphaTarget(0);
         d3.event.subject.fx = null;
         d3.event.subject.fy = null;
+        console.log(d3.event.subject);
       }
 
       function drawLink(d) {
@@ -339,12 +340,12 @@ var scrollVis = function() {
     activateFunctions[15] = jumpIntoCluster;
     activateFunctions[16] = nothingFn;
     activateFunctions[17] = egoCentricViews;
-    activateFunctions[18] = nothingFn;
-    activateFunctions[19] = nothingFn;
+    activateFunctions[18] = pinNodes;
+    activateFunctions[19] = expandNodes;
     activateFunctions[20] = nothingFn;
     activateFunctions[21] = nothingFn;
 
-
+    // egoCentricViews
     // updateFunctions are called while
     // in a particular section to update
     // the scroll progress in that section.
@@ -627,53 +628,60 @@ function updateNodes(nodes) {
     updateLinks();
 
     simulation.alphaTarget(0.1).restart();
+
+    radius = 7;
   }
 
 
 
-  function egoCentricViews() {
-    console.log("egoCentric");
-    // var arnicas = 6146692;
+  function getFriends(user1, user2) {
     var arnicas = chart.graph.nodes
-      .filter(function (d) { return d.screen_name=="arnicas"; });
-    arnicas[0].step = 0;
-    var oneStep = chart.graph.links.filter(function (d) { return d.source.screen_name === "arnicas"; })
+      .filter(function (d) { return d.screen_name==user1 || d.screen_name===user2; });
+
+    var oneStep = chart.graph.links.filter(function (d) { return d.source.screen_name === user1; })
       .map(function (d) {
         d.target.step=1;
         return d.target;
-      }).slice(0,10);
+      });
     var oneStepNames = oneStep.map(function (d) { return d.screen_name; });
 
     var secondStep = chart.graph.links
       .filter(function (d) {
-        if (oneStepNames.indexOf(d.target.screen_name)!==-1 || d.target.screen_name!=="arnicas") {
+        if (oneStepNames.indexOf(d.target.screen_name)!==-1) {
           return false;
         } else
-          return oneStepNames.indexOf(d.source.screen_name)!==-1;
+          return oneStepNames.slice(0,10).indexOf(d.source.screen_name)!==-1;
       }).slice(0,10)
       .map(function (d) {
         d.target.step=2;
         return d.target; });
 
-    arnicas[0].step=0
+    arnicas[1].step = 0;
+    return arnicas.concat(oneStep.slice(0,10)).concat(secondStep);
+  }
+
+  function egoCentricViews() {
+    console.log("egoCentric");
+    radius = 10;
+    // var arnicas = 6146692;
+    var benAndArnicasFriends = getFriends("arnicas", "benbendc");
+
+    filteredNodes = benAndArnicasFriends ;
+    console.log("ego nodes");
+    console.log(filteredNodes);
+    updateNodes(filteredNodes);
+    updateLinks();
 
     foci = {};
     foci[0] = [width*1/5, height/2];
     foci[1] = [width*2/5, height/2];
     foci[2] = [width*3/5, height/2];
 
-    filteredNodes = arnicas.concat(oneStep).concat(secondStep);
-    console.log("ego nodes");
-    console.log(filteredNodes);
-    updateNodes(filteredNodes);
-    updateLinks();
-
-
-
     simulation
           // .force("center", function () {})
-          .force("x", d3.forceX(function (d) { return foci[d.step][0]; }).strength(0.5))
+          .force("x", d3.forceX(function (d) { return foci[d.step][0]; }).strength(0.3))
           .force("y", d3.forceY(function (d) { return foci[d.step][1]; }).strength(0.2))
+          .force("collide", d3.forceCollide(radius+4).iterations(4))
     simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.05).distance(150))
           .force("charge", d3.forceManyBody().strength(-50));
 
@@ -681,6 +689,71 @@ function updateNodes(nodes) {
 
     simulation.alphaTarget(0.1).restart();
   }
+
+function pinNodes() {
+    console.log("pinNodes");
+
+    var benAndArnicasFriends = getFriends("arnicas", "benbendc");
+
+    filteredNodes = benAndArnicasFriends ;
+    console.log("ego nodes");
+    console.log(filteredNodes);
+    updateNodes(filteredNodes);
+    updateLinks();
+
+    foci = {};
+    foci["arnicas"] = [100, 100];
+    foci["benbendc"] = [450, 450];
+
+    simulation
+          // .force("center", function () {})
+          .force("x", d3.forceX(function (d) { return foci[d.screen_name] !== undefined ? foci[d.screen_name][0] : width/2; })
+            .strength(function (d) {
+              return foci[d.screen_name] !== undefined ? 0.3 : 0.00001}))
+          .force("y", d3.forceY(function (d) { return foci[d.screen_name] !== undefined ? foci[d.screen_name][1] : height/2; })
+            .strength(function (d) { return foci[d.screen_name] !== undefined ? 0.3 : 0.00001}))
+
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.05).distance(40))
+
+    // updateNodes(filteredNodes);
+    updateLinks();
+
+
+
+    simulation
+        .force("center", function () {})
+        .force("collide", d3.forceCollide(radius+4).iterations(4));
+
+    simulation.alphaTarget(0.1).restart();
+  }
+
+  function expandNodes() {
+
+    var benFriends = chart.graph.links
+      .filter(function (d) {
+          return d.source.screen_name!=="benbendc";
+      })
+      .map(function (d) {
+        return d.target; });
+    var arnicasFriendsNames = chart.graph.links
+      .filter(function (d) {
+          return d.source.screen_name!=="arnicas";
+      })
+      .map(function (d) {
+        return d.target.screen_name; });
+
+    var expanded = benFriends.filter(function (d) {
+      return arnicasFriendsNames.indexOf(d.screen_name)!==-1;
+    }).slice(0,10);
+
+    filteredNodes = filteredNodes.concat(expanded);
+    updateNodes(filteredNodes);
+    updateLinks();
+
+    simulation.alphaTarget(0.1).restart();
+  }
+
+
 
 
   // Update functions
