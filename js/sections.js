@@ -228,7 +228,7 @@ var scrollVis = function() {
           } else {
             if (grayedOutList &&
               grayedOutList[d.id]!==undefined) {
-              context.globalAlpha = 0.3; //final value
+              context.globalAlpha = 0.1; //final value
             } else {
                context.globalAlpha = 1;
             }
@@ -321,8 +321,8 @@ var scrollVis = function() {
     activateFunctions[1] = showInfluentials;
     activateFunctions[2] = showAllNodes;
     activateFunctions[3] = showLinks;
-    activateFunctions[4] = showLinks;
-    activateFunctions[5] = showLinks;
+    activateFunctions[4] = nothingFn;
+    activateFunctions[5] = nothingFn;
     activateFunctions[6] = showLinks;
     // Rank by importance
     activateFunctions[7] = selectInfluentials;
@@ -335,7 +335,7 @@ var scrollVis = function() {
     activateFunctions[12] = forceInABox;
 
 
-    activateFunctions[13] = nothingFn;
+    activateFunctions[13] = hideInterClusters;
     activateFunctions[14] = nothingFn;
     activateFunctions[15] = jumpIntoCluster;
     activateFunctions[16] = nothingFn;
@@ -373,7 +373,7 @@ function updateClusters() {
 function updateNodes(nodes) {
     simulation.nodes(nodes);
     updateClusters();
-    filteredNodes = nodes.slice(0);
+    filteredNodes = nodes;
     console.log("Updated nodes count:" + filteredNodes.length);
   }
 
@@ -589,15 +589,15 @@ function updateNodes(nodes) {
   function forceInABox() {
     foci["0"] = [220, 180];
     foci["1"] = [500, 300];
-    foci["2"] = [200, 300];
+    foci["2"] = [200, 400];
     foci["3"] = [450, 120];
     foci["4"] = [250, 400];
-    foci["5"] = [250, 300];
+    foci["5"] = [250, 350];
 
     simulation
           // .force("center", function () {})
-          .force("x", d3.forceX(function (d) { return foci[d.cluster][0]; }).strength(0.2))
-          .force("y", d3.forceY(function (d) { return foci[d.cluster][1]; }).strength(0.2))
+          .force("x", d3.forceX(function (d) { return foci[d.cluster][0]; }).strength(0.3))
+          .force("y", d3.forceY(function (d) { return foci[d.cluster][1]; }).strength(0.3))
     simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(function (d) {
       return (d.source.cluster === d.target.cluster) ?
         0.1 :
@@ -607,29 +607,45 @@ function updateNodes(nodes) {
 
     simulation.force("link").links(filteredLinks);
 
+    simulation.alphaTarget(0.2).restart();
+  }
+
+  function hideInterClusters() {
+    console.log("hideInterClusters");
+
+    filteredLinks = filteredLinks.filter(function (d) {
+      return d.source.cluster === d.target.cluster;
+    })
+
+    simulation.force("link")
+          .links(filteredLinks);
+
     simulation.alphaTarget(0.1).restart();
   }
 
 
   function jumpIntoCluster() {
     console.log("jumpIntoCluster")
-    var oldFilteredNodes = filteredNodes.slice(0);
+    // var oldFilteredNodes = filteredNodes.slice(0);
 
-    filteredNodes = filteredNodes.filter(function (d) {
+    filteredNodes = simulation.nodes().filter(function (d) {
       return d.cluster==="1";
     });
+    radius = 7;
 
     updateNodes(filteredNodes);
+
     simulation
       .force("center", d3.forceCenter(width/2, height/2))
       .force("x", function () {})
       .force("y", function () {})
-    simulation.force("link", d3.forceLink().id(function (d) { return d.id; }).strength(0.1).distance(150));
+      // .force("collide", d3.forceCollide(radius+4).iterations(4))
+    // simulation.force("link", d3.forceLink().id(function (d) { return d.id; }).strength(0.1).distance(150));
     updateLinks();
 
-    simulation.alphaTarget(0.1).restart();
+    // simulation.alphaTarget(0.01).restart();
 
-    radius = 7;
+
   }
 
 
