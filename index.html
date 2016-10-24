@@ -18,30 +18,121 @@
 <div class="container">
   <div id='graphic'>
     <div id='sections'>
+      <!-- step 1 -->
       <section class="step">
         <div class="title">Network Visualization in the real world</div>
         We designed and implemented a real world Network Visualization tool, here is what we learned
       </section>
+      <!-- step 2 -->
+      <section class="step">
+      <div class="title">@ieeevis most followed</div>
+        Here are the top 100 accounts with most followers in the @ieeevis community
+      </section>
+      <!-- step 3 -->
       <section class="step">
         <div class="title">IEEEvis Tweeters</div>
-        As an example here are the <span id="nodeCount"></span> twitter users who tweeted about @ieeevis last year. I wanted to find who where the most interesting people I should be following, so I looked at who they followed
+        They were calculated by collecting the <span id="nodeCount"></span> Twitter users who tweeted about @ieeevis last year. I wanted to find who where the most interesting people I should be following, so I looked at who they followed
       </section>
+      <!-- step 4 -->
       <section class="step">
-        <div class="title">Who they followed</div>
-        Here are the top 100 accounts they followed
+        <div class="title">Follower network</div>
+        Let's add the links.
       </section>
+      <!-- step 5 -->
+      <section class="step">
+        <div class="title">It's a mess</div>
+        :(
+      </section>
+
+      <!-- step 6 -->
       <section class="step">
         <div class="title">State of the art</div>
-        Let's add the links.
+        This a simple example of how even a small network visualization like this, it's useless in the real world
       </section>
+
+      <!-- step 7 -->
       <section class="step">
         <div class="title">Lessons learned</div>
-        Let's add the links.
       </section>
+      <!-- step 8 -->
       <section class="step">
-        <div class="title">Lesson 1: </div>
-        Let's add the links.
+        <div class="title">Select most important nodes</div>
+        On a large network we cannot show everything. So select the most important nodes of the network. You can use different network metrics to select the most important nodes. In this twitter example we can select the most followed accounts to be our base.
       </section>
+      <!-- step 9 -->
+      <section class="step">
+        <div class="title">Also select their neighbors</div>
+        Also select their neighborhoods. The most important nodes might not be connected, so also select a small sample of the important's neighbor nodes.
+      </section>
+
+      <!-- step 10 -->
+      <section class="step">
+        <div class="title">Lesson 1. Rank by importance</div>
+        Filter out everything else, and allow the user to change the filtering parameters
+      </section>
+
+      <!-- step 11 -->
+      <section class="step">
+        <div class="title">Lesson 2. Show an overview of communities</div>
+        Use clustering to highlight communities. We created and open sourced an <strong>in-browser</strong> network clustering library. The fact that it is clustering on the browser allows user to detect communities on the currently user filtered nodes.
+      </section>
+
+      <!-- step 12 -->
+      <section class="step">
+        <div class="title">Lesson 2. Show an overview of communities</div>
+        Showing clusters is not enough. Separate them using force-in-a-box, an open source dynamic group in a box algorithm that separate each cluster into it's own box.
+      </section>
+
+
+      <!-- step 13 -->
+      <section class="step">
+        <div class="title">Lesson 2. Show an overview of communities</div>
+        Hide inter cluster links.
+      </section>
+
+      <!-- step 14 -->
+      <section class="step">
+        <div class="title">Lesson 2. Show an overview of communities</div>
+        Or not.
+      </section>
+
+      <section class="step">
+        <div class="title">Lesson 3. Navigate into clusters</div>
+        Allow users to jump into a cluster
+      </section>
+
+      <!-- step 16 -->
+      <section class="step">
+        <div class="title">Lesson 4. Where am I?</div>
+        But provide also widgets to help guide the user in the graph
+      </section>
+
+      <!-- step 17 -->
+      <section class="step">
+        <div class="title">Lesson 5. Ego centric views</div>
+        Sometimes users want to explore the connections of one or more nodes of interest. Provide layouts to understand distances between nodes.
+      </section>
+
+      <!-- step 18 -->
+      <section class="step">
+        <div class="title">Lesson 6. Node Pinning</div>
+        Allow users to pin nodes on the layout
+      </section>
+
+
+      <!-- step 19 -->
+      <section class="step">
+        <div class="title">Lesson 7. Node Expansion</div>
+        And finally allow users to expand connections on demand.
+      </section>
+
+
+      <!-- step 20 -->
+      <section class="step">
+        <div class="title">Thank you!</div>
+        <a href="http://johnguerra.co">John Alexis Guerra Gómez</a>
+      </section>
+
     </div>
     <div id='vis'>
     </div>
