@@ -44,6 +44,9 @@ var scrollVis = function() {
   // Should we show images
   var HIDE_IMAGES = false;
 
+  // Should we show clusters?
+  var showClusters = false;
+
   // List of nodes to be grayedOut
   var grayingOutList = [];
   var grayedOutList = [];
@@ -56,9 +59,16 @@ var scrollVis = function() {
     .range([1.0, 0.3]);
 
 
+  var foci = {};
+
+
   // Currently visible nodes
   var filteredNodes = [];
+  // For jump into cluster
+  var oldFilteredNodes = [];
 
+  // Currently visible links
+  var filteredLinks = [];
   // When scrolling to a new section
   // the activation function for that
   // section is called.
@@ -101,7 +111,7 @@ var scrollVis = function() {
           .force("x", d3.forceX(width/2).strength(0.03))
           .force("y", d3.forceY(height/2).strength(0.03))
           // .force("center", d3.forceCenter(width / 2, height / 2))
-          .force("collide", d3.forceCollide(radius+1).iterations(4))
+          .force("collide", d3.forceCollide(radius+4).iterations(4))
           // .force("forceX", d3.forceCenter(width / 2, height / 2));
           // .force("forceY", d3.forceCenter(width / 2, height / 2));
 
@@ -153,11 +163,13 @@ var scrollVis = function() {
 
 
         clusters.forEach(function(cluster) {
-          context.beginPath();
+          // context.beginPath();
           cluster.values.forEach(drawNode);
-          context.fillStyle = color(cluster.key);
-          context.fill();
+          // context.fillStyle = color(cluster.key);
+          // context.fill();
         });
+
+        // simulation.nodes().forEach(drawNode);
 
         context.restore();
       }
@@ -197,7 +209,13 @@ var scrollVis = function() {
           context.arc(d.x, d.y, radius, 0, 2 * Math.PI);
         } else {
 
-          context.save();
+          context.restore();
+          context.moveTo(d.x + radius, d.y+radius);
+          context.arc(d.x+radius, d.y+radius, radius+2, 0, 2 * Math.PI);
+          context.fillStyle = color(showClusters ? d.cluster : "none");
+          context.fill();
+
+
 
           // If a node is in this list it will be grayed out
           if (grayingOutList &&
@@ -217,18 +235,25 @@ var scrollVis = function() {
           }
 
 
+          context.save();
           context.beginPath();
-          context.arc(d.x+radius, d.y+radius, radius, 0, Math.PI * 2, true);
+          context.arc(d.x + radius, d.y+radius, radius, 0, Math.PI * 2, true);
           context.closePath();
           context.clip();
 
           context.drawImage(d.nodeImg, d.x, d.y, radius*2, radius*2);
 
-          // context.beginPath();
-          // context.arc(d.x, d.y, radius+10, 0, Math.PI * 2, true);
-          // context.clip();
-          // context.closePath();
-          context.restore();
+          context.beginPath();
+          context.arc(-radius, -radius, radius, 0, Math.PI * 2, true);
+          context.clip();
+          context.closePath();
+          // context.restore();
+
+
+
+
+
+
         }
 
 
@@ -264,10 +289,12 @@ var scrollVis = function() {
       d.nodeImg.src = d.profile_image_url;
       d.nodeImgData = null;
       d.nodeImg.onload = function() {
-        console.log("Loaded image" + d.profile_image_url);
+        // console.log("Loaded image" + d.profile_image_url);
         d.nodeImgData = this;
       }
     });
+
+    // graph.nodes = graph.nodes.slice(0,1);
 
 
     graph.links.forEach(function (d) {
@@ -303,17 +330,19 @@ var scrollVis = function() {
 
     activateFunctions[10] = showLinks;
     // Compute clusters
-    activateFunctions[11] = showClusters;
-    activateFunctions[12] = showAllNodes;
-    activateFunctions[13] = showFillerTitle;
-    activateFunctions[14] = showFillerTitle;
-    activateFunctions[15] = showFillerTitle;
-    activateFunctions[16] = showAllNodes;
-    activateFunctions[17] = showFillerTitle;
-    activateFunctions[18] = showFillerTitle;
-    activateFunctions[19] = showFillerTitle;
-    activateFunctions[20] = showFillerTitle;
-    activateFunctions[21] = showFillerTitle;
+    activateFunctions[11] = showClustersFn;
+    activateFunctions[12] = forceInABox;
+
+
+    activateFunctions[13] = nothingFn;
+    activateFunctions[14] = nothingFn;
+    activateFunctions[15] = jumpIntoCluster;
+    activateFunctions[16] = nothingFn;
+    activateFunctions[17] = egoCentricViews;
+    activateFunctions[18] = nothingFn;
+    activateFunctions[19] = nothingFn;
+    activateFunctions[20] = nothingFn;
+    activateFunctions[21] = nothingFn;
 
 
     // updateFunctions are called while
@@ -330,13 +359,19 @@ var scrollVis = function() {
   };
 
 
-function updateNodes(nodes) {
-    simulation.nodes(nodes);
+function updateClusters() {
     clusters = d3.nest()
-      .key(function(d) { return d.cluster; })
-      .entries(nodes)
+      .key(function(d) { return showClusters ? d.cluster : "none"; })
+      .entries(simulation.nodes())
       .sort(function(a, b) { return b.values.length - a.values.length; });
 
+    console.log("clusters");
+    console.log(clusters);
+
+}
+function updateNodes(nodes) {
+    simulation.nodes(nodes);
+    updateClusters();
     filteredNodes = nodes.slice(0);
     console.log("Updated nodes count:" + filteredNodes.length);
   }
@@ -346,8 +381,9 @@ function updateNodes(nodes) {
   */
   function updateLinks() {
     var dictNodes = {},
-      allLinks = chart.graph.links,
-      filteredLinks = [];
+      allLinks = chart.graph.links;
+
+    filteredLinks = [];
 
     filteredNodes.forEach(function (d) {
       dictNodes[d.id] = d;
@@ -501,7 +537,7 @@ function updateNodes(nodes) {
     // Bring back 200 other nodes
     grayingOutList = {};
     chart.graph.nodes.filter(function (d) { return d.influential!== true; })
-    .slice(0,200)
+    .slice(0,100)
     .forEach(function (d) { grayingOutList[d.id]=d; })
 
     grayedScale.range([0.3, 1.0]);
@@ -536,13 +572,116 @@ function updateNodes(nodes) {
           .force("x", d3.forceX(width/2).strength(0.01))
           .force("y", d3.forceY(height/2).strength(0.01))
           // .force("collide", function () {});
+    showClusters = false;
+    simulation.alphaTarget(0.1).restart();
+
+  }
+
+  function showClustersFn() {
+    showClusters = true;
+    updateClusters();
+    simulation.alphaTarget(0.1).restart();
+
+  }
+
+
+  function forceInABox() {
+    foci["0"] = [220, 180];
+    foci["1"] = [500, 300];
+    foci["2"] = [200, 300];
+    foci["3"] = [450, 120];
+    foci["4"] = [250, 400];
+    foci["5"] = [250, 300];
+
+    simulation
+          // .force("center", function () {})
+          .force("x", d3.forceX(function (d) { return foci[d.cluster][0]; }).strength(0.2))
+          .force("y", d3.forceY(function (d) { return foci[d.cluster][1]; }).strength(0.2))
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(function (d) {
+      return (d.source.cluster === d.target.cluster) ?
+        0.1 :
+        0.0001;
+    }).distance(150))
+          .force("charge", d3.forceManyBody().strength(-50));
+
+    simulation.force("link").links(filteredLinks);
 
     simulation.alphaTarget(0.1).restart();
   }
 
-  function showClusters() {
 
+  function jumpIntoCluster() {
+    console.log("jumpIntoCluster")
+    var oldFilteredNodes = filteredNodes.slice(0);
+
+    filteredNodes = filteredNodes.filter(function (d) {
+      return d.cluster==="1";
+    });
+
+    updateNodes(filteredNodes);
+    simulation
+      .force("center", d3.forceCenter(width/2, height/2))
+      .force("x", function () {})
+      .force("y", function () {})
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; }).strength(0.1).distance(150));
+    updateLinks();
+
+    simulation.alphaTarget(0.1).restart();
   }
+
+
+
+  function egoCentricViews() {
+    console.log("egoCentric");
+    // var arnicas = 6146692;
+    var arnicas = chart.graph.nodes
+      .filter(function (d) { return d.screen_name=="arnicas"; });
+    arnicas[0].step = 0;
+    var oneStep = chart.graph.links.filter(function (d) { return d.source.screen_name === "arnicas"; })
+      .map(function (d) {
+        d.target.step=1;
+        return d.target;
+      }).slice(0,10);
+    var oneStepNames = oneStep.map(function (d) { return d.screen_name; });
+
+    var secondStep = chart.graph.links
+      .filter(function (d) {
+        if (oneStepNames.indexOf(d.target.screen_name)!==-1 || d.target.screen_name!=="arnicas") {
+          return false;
+        } else
+          return oneStepNames.indexOf(d.source.screen_name)!==-1;
+      }).slice(0,10)
+      .map(function (d) {
+        d.target.step=2;
+        return d.target; });
+
+    arnicas[0].step=0
+
+    foci = {};
+    foci[0] = [width*1/5, height/2];
+    foci[1] = [width*2/5, height/2];
+    foci[2] = [width*3/5, height/2];
+
+    filteredNodes = arnicas.concat(oneStep).concat(secondStep);
+    console.log("ego nodes");
+    console.log(filteredNodes);
+    updateNodes(filteredNodes);
+    updateLinks();
+
+
+
+    simulation
+          // .force("center", function () {})
+          .force("x", d3.forceX(function (d) { return foci[d.step][0]; }).strength(0.5))
+          .force("y", d3.forceY(function (d) { return foci[d.step][1]; }).strength(0.2))
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.05).distance(150))
+          .force("charge", d3.forceManyBody().strength(-50));
+
+    simulation.force("link").links(filteredLinks);
+
+    simulation.alphaTarget(0.1).restart();
+  }
+
 
   // Update functions
   function updateGrayed(progress) {
@@ -619,6 +758,7 @@ var display = function(mGraph) {
 
     // activate current section
     plot.activate(index);
+    console.log("Activate " + index);
   });
 
   scroll.on('progress', function(index, progress){
