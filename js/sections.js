@@ -58,6 +58,16 @@ var scrollVis = function() {
     .domain([0, 1.0])
     .range([1.0, 0.3]);
 
+  var showNodeNavigator = false;
+
+  var nodeNavImage = new Image();
+  nodeNavImage.src = "./data/nodeNavigator.png";
+  nodeNavImage.onload = function (error) {
+    console.log("done!");
+    console.log(error);
+    nodeNavImage.data = this;
+  }
+
 
   var foci = {};
 
@@ -148,8 +158,14 @@ var scrollVis = function() {
 
       function ticked() {
         context.clearRect(0, 0, width, height);
+        if (showNodeNavigator)
+        {
+          context.drawImage(nodeNavImage, 0,0, 130, height);
+        }
+
         context.save();
         // context.translate(width / 2, height / 2);
+
 
         context.beginPath();
         if (chart.drawLinks) {
@@ -336,9 +352,9 @@ var scrollVis = function() {
 
 
     activateFunctions[13] = hideInterClusters;
-    activateFunctions[14] = nothingFn;
+    activateFunctions[14] = hideInterClusters;
     activateFunctions[15] = jumpIntoCluster;
-    activateFunctions[16] = nothingFn;
+    activateFunctions[16] = showNodeNavigatorFn;
     activateFunctions[17] = egoCentricViews;
     activateFunctions[18] = pinNodes;
     activateFunctions[19] = expandNodes;
@@ -555,16 +571,22 @@ function updateNodes(nodes) {
     simulation.alphaTarget(0.1).restart();
   }
 
+  function getRankedNodes() {
+    var influentials = chart.graph.nodes
+        .filter(function (d) {
+          return d.influential; }),
+      neighbors = chart.graph.nodes.filter(function (d) { return d.influential!== true; })
+    .slice(0,100);
+    return influentials.concat(neighbors);
+
+  }
+
   function rankByImportance () {
     if (!chart.graph) return;
     simulation.stop();
     chart.drawLinks = false;
 
-    updateNodes(chart.graph.nodes
-      .filter(function (d) {
-        return d.influential ||
-          grayingOutList[d.id] !==undefined;
-        }));
+    updateNodes(getRankedNodes());
 
     // Remove links
     simulation.force("link", function () {})
@@ -587,6 +609,7 @@ function updateNodes(nodes) {
 
 
   function forceInABox() {
+    foci = {};
     foci["0"] = [220, 180];
     foci["1"] = [500, 300];
     foci["2"] = [200, 400];
@@ -598,25 +621,30 @@ function updateNodes(nodes) {
           // .force("center", function () {})
           .force("x", d3.forceX(function (d) { return foci[d.cluster][0]; }).strength(0.3))
           .force("y", d3.forceY(function (d) { return foci[d.cluster][1]; }).strength(0.3))
-    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(function (d) {
-      return (d.source.cluster === d.target.cluster) ?
-        0.1 :
-        0.0001;
-    }).distance(150))
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } )
+      .strength(function (d) {
+        return (d.source.cluster === d.target.cluster) ?
+          0.1 :
+          0.0001;
+      }).distance(150))
           .force("charge", d3.forceManyBody().strength(-50));
 
-    simulation.force("link").links(filteredLinks);
+    updateNodes(getRankedNodes());
+    updateLinks()
+    // simulation.force("link").links(filteredLinks);
 
-    simulation.alphaTarget(0.2).restart();
+    simulation.alphaTarget(0.1).restart();
   }
 
   function hideInterClusters() {
     console.log("hideInterClusters");
 
+    updateNodes(getRankedNodes());
+    updateLinks();
     filteredLinks = filteredLinks.filter(function (d) {
       return d.source.cluster === d.target.cluster;
     })
-
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; }).strength(0.1).distance(150));
     simulation.force("link")
           .links(filteredLinks);
 
@@ -628,26 +656,46 @@ function updateNodes(nodes) {
     console.log("jumpIntoCluster")
     // var oldFilteredNodes = filteredNodes.slice(0);
 
-    filteredNodes = simulation.nodes().filter(function (d) {
+    foci = {};
+    foci["0"] = [220, 180];
+    foci["1"] = [600, 300];
+    foci["2"] = [200, 400];
+    foci["3"] = [450, 120];
+    foci["4"] = [250, 400];
+    foci["5"] = [250, 350];
+
+    var clusterNodes  = filteredNodes.filter(function (d) {
       return d.cluster==="1";
     });
-    radius = 7;
 
-    updateNodes(filteredNodes);
+    showNodeNavigator = false;
+
+    updateNodes(clusterNodes);
 
     simulation
-      .force("center", d3.forceCenter(width/2, height/2))
-      .force("x", function () {})
-      .force("y", function () {})
-      // .force("collide", d3.forceCollide(radius+4).iterations(4))
-    // simulation.force("link", d3.forceLink().id(function (d) { return d.id; }).strength(0.1).distance(150));
-    updateLinks();
+      // .force("center", d3.forceCenter(width/2, height/2))
+      // .force("x", function () {})
+      // .force("y", function () {})
+      // .force("x", d3.forceX(function (d) { return foci[d.cluster][0]; }).strength(0.5))
+      // .force("y", d3.forceY(function (d) { return foci[d.cluster][1]; }).strength(0.5))
 
-    // simulation.alphaTarget(0.01).restart();
+      // .force("collide", d3.forceCollide(radius+4).iterations(4))
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; }).strength(0.1).distance(250));
+    updateLinks();
+    // updateLinks();
+
+    // simulation.alphaTarget(0).restart();
 
 
   }
 
+
+  function showNodeNavigatorFn() {
+    radius = 7;
+    showNodeNavigator = true;
+
+    simulation.alphaTarget(0).restart();
+  }
 
 
   function getFriends(user1, user2) {
@@ -678,6 +726,7 @@ function updateNodes(nodes) {
 
   function egoCentricViews() {
     console.log("egoCentric");
+    showNodeNavigator = false;
     radius = 10;
     // var arnicas = 6146692;
     var benAndArnicasFriends = getFriends("arnicas", "benbendc");
