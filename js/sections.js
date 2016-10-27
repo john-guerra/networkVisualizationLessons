@@ -258,7 +258,13 @@ var scrollVis = function() {
           context.closePath();
           context.clip();
 
-          context.drawImage(d.nodeImg, d.x, d.y, radius*2, radius*2);
+          try {
+            context.drawImage(d.nodeImg, d.x, d.y, radius*2, radius*2);
+          } catch (e) {
+            console.error("Error drawing the image ");
+            console.error(e);
+          }
+
 
           context.beginPath();
           context.arc(-radius, -radius, radius, 0, Math.PI * 2, true);
@@ -328,38 +334,39 @@ var scrollVis = function() {
    *
    */
   var setupSections = function() {
-    var STEPS = 22;
+    var STEPS = 23;
 
     var nothingFn = function () {};
     // activateFunctions are called each
     // time the active section changes
-    activateFunctions[0] = showTitle;
-    activateFunctions[1] = showInfluentials;
-    activateFunctions[2] = showAllNodes;
-    activateFunctions[3] = showLinks;
-    activateFunctions[4] = nothingFn;
-    activateFunctions[5] = nothingFn;
-    activateFunctions[6] = showLinks;
+
+    var step = 0;
+    activateFunctions[step++] = showTitle;
+    activateFunctions[step++] = showSubTitle;
+    activateFunctions[step++] = showInfluentials;
+    activateFunctions[step++] = showAllNodes;
+    activateFunctions[step++] = showLinks;
+    activateFunctions[step++] = nothingFn;
+    activateFunctions[step++] = nothingFn;
+    activateFunctions[step++] = showLinks;
     // Rank by importance
-    activateFunctions[7] = selectInfluentials;
-    activateFunctions[8] = selectNeighborhood;
-    activateFunctions[9] = rankByImportance;
+    activateFunctions[step++] = selectInfluentials;
+    activateFunctions[step++] = selectNeighborhood;
+    activateFunctions[step++] = rankByImportance;
 
-    activateFunctions[10] = showLinks;
+    activateFunctions[step++] = showLinks;
     // Compute clusters
-    activateFunctions[11] = showClustersFn;
-    activateFunctions[12] = forceInABox;
-
-
-    activateFunctions[13] = hideInterClusters;
-    activateFunctions[14] = hideInterClusters;
-    activateFunctions[15] = jumpIntoCluster;
-    activateFunctions[16] = showNodeNavigatorFn;
-    activateFunctions[17] = egoCentricViews;
-    activateFunctions[18] = pinNodes;
-    activateFunctions[19] = expandNodes;
-    activateFunctions[20] = nothingFn;
-    activateFunctions[21] = nothingFn;
+    activateFunctions[step++] = showClustersFn;
+    activateFunctions[step++] = forceInABox;
+    activateFunctions[step++] = hideInterClusters;
+    activateFunctions[step++] = hideInterClusters;
+    activateFunctions[step++] = jumpIntoCluster;
+    activateFunctions[step++] = showNodeNavigatorFn;
+    activateFunctions[step++] = egoCentricViews;
+    activateFunctions[step++] = pinNodes;
+    activateFunctions[step++] = expandNodes;
+    activateFunctions[step++] = nothingFn;
+    activateFunctions[step++] = nothingFn;
 
     // egoCentricViews
     // updateFunctions are called while
@@ -448,8 +455,25 @@ function updateNodes(nodes) {
     context.clearRect(0, 0, width, height);
     context.save();
 
+    context.textAlign="center";
+    context.fillStyle = "black";
     context.font = "40px Arial";
-    context.fillText("IEEEVIS Influentials",width/2-100,height/2);
+    context.fillText("NetViz in the Real World",width/2,height/2);
+    context.font = "38px Arial";
+    context.fillText("Lessons Learned",width/2,height/2+40);
+
+    context.restore();
+  }
+
+  function showSubTitle() {
+    simulation.stop();
+    context.clearRect(0, 0, width, height);
+    context.save();
+
+    context.textAlign="center";
+    context.fillStyle = "black";
+    context.font = "40px Arial";
+    context.fillText("IEEEVIS most followed",width/2,height/2);
 
     context.restore();
   }
@@ -502,6 +526,8 @@ function updateNodes(nodes) {
     if (!chart.graph) return;
     simulation.stop();
     chart.drawLinks = true;
+
+    context.fillStyle = "steelblue";
 
     simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.8).distance(150))
           .force("charge", d3.forceManyBody().strength(-100));
@@ -638,15 +664,23 @@ function updateNodes(nodes) {
 
   function hideInterClusters() {
     console.log("hideInterClusters");
+    simulation.stop();
 
     updateNodes(getRankedNodes());
     updateLinks();
+
     filteredLinks = filteredLinks.filter(function (d) {
       return d.source.cluster === d.target.cluster;
     })
+    simulation
+        .force("x", d3.forceX(function (d) { return foci[d.cluster][0]; }).strength(0.3))
+        .force("y", d3.forceY(function (d) { return foci[d.cluster][1]; }).strength(0.3));
+
     simulation.force("link", d3.forceLink().id(function (d) { return d.id; }).strength(0.1).distance(150));
     simulation.force("link")
           .links(filteredLinks);
+
+
 
     simulation.alphaTarget(0.1).restart();
   }
@@ -663,6 +697,10 @@ function updateNodes(nodes) {
     foci["3"] = [450, 120];
     foci["4"] = [250, 400];
     foci["5"] = [250, 350];
+
+    updateNodes(getRankedNodes());
+    updateLinks();
+
 
     var clusterNodes  = filteredNodes.filter(function (d) {
       return d.cluster==="1";
@@ -684,7 +722,7 @@ function updateNodes(nodes) {
     updateLinks();
     // updateLinks();
 
-    // simulation.alphaTarget(0).restart();
+    simulation.alphaTarget(0).restart();
 
 
   }
@@ -744,8 +782,8 @@ function updateNodes(nodes) {
 
     simulation
           // .force("center", function () {})
-          .force("x", d3.forceX(function (d) { return foci[d.step][0]; }).strength(0.3))
-          .force("y", d3.forceY(function (d) { return foci[d.step][1]; }).strength(0.2))
+          .force("x", d3.forceX(function (d) { return foci[d.step]!== undefined ? foci[d.step][0] : width/2; }).strength(0.3))
+          .force("y", d3.forceY(function (d) { return foci[d.step]!== undefined ? foci[d.step][1] : height/2; }).strength(0.2))
           .force("collide", d3.forceCollide(radius+4).iterations(4))
     simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.05).distance(150))
           .force("charge", d3.forceManyBody().strength(-50));
