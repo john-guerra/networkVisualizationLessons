@@ -346,24 +346,27 @@ var scrollVis = function() {
     activateFunctions[step++] = showInfluentials;
     activateFunctions[step++] = showAllNodes;
     activateFunctions[step++] = showLinks;
+
     activateFunctions[step++] = nothingFn;
     activateFunctions[step++] = nothingFn;
     activateFunctions[step++] = showLinks;
     // Rank by importance
     activateFunctions[step++] = selectInfluentials;
     activateFunctions[step++] = selectNeighborhood;
-    activateFunctions[step++] = rankByImportance;
 
+    activateFunctions[step++] = rankByImportance;
     activateFunctions[step++] = showLinks;
     // Compute clusters
     activateFunctions[step++] = showClustersFn;
     activateFunctions[step++] = forceInABox;
     activateFunctions[step++] = hideInterClusters;
+
     activateFunctions[step++] = hideInterClusters;
     activateFunctions[step++] = jumpIntoCluster;
     activateFunctions[step++] = showNodeNavigatorFn;
     activateFunctions[step++] = egoCentricViews;
     activateFunctions[step++] = pinNodes;
+
     activateFunctions[step++] = expandNodes;
     activateFunctions[step++] = nothingFn;
     activateFunctions[step++] = nothingFn;
@@ -391,8 +394,8 @@ function updateClusters() {
 
     console.log("clusters");
     console.log(clusters);
-
 }
+
 function updateNodes(nodes) {
     simulation.nodes(nodes);
     updateClusters();
