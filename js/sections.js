@@ -176,14 +176,16 @@ var scrollVis = function() {
         }
 
 
-
-
         clusters.forEach(function(cluster) {
-          // context.beginPath();
-          cluster.values.forEach(drawNode);
-          // context.fillStyle = color(cluster.key);
-          // context.fill();
-        });
+            context.beginPath();
+            cluster.values.forEach(drawNode);
+            context.fillStyle = color(showClusters ? cluster.key : "none");
+            context.fill();
+          });
+
+          // context.globalAlpha = 1.0;
+          simulation.nodes().forEach(drawPic);
+
 
         // simulation.nodes().forEach(drawNode);
 
@@ -219,68 +221,104 @@ var scrollVis = function() {
       }
 
 
-
       function drawNode(d) {
         if (HIDE_IMAGES) {
-          context.moveTo(d.x + radius, d.y);
-          context.arc(d.x, d.y, radius, 0, 2 * Math.PI);
+          context.moveTo(d.x + radius /2, d.y + radius /2);
+          context.arc(d.x + radius /2, d.y+ radius /2, radius , 0, 2 * Math.PI);
         } else {
 
-          context.restore();
-          context.moveTo(d.x + radius, d.y+radius);
-          context.arc(d.x+radius, d.y+radius, radius+2, 0, 2 * Math.PI);
-          context.fillStyle = color(showClusters ? d.cluster : "none");
-          context.fill();
+          // context.restore();
 
 
+          context.moveTo(d.x + radius , d.y+radius );
+          context.arc(d.x+radius /2, d.y+radius /2, radius +2, 0, 2 * Math.PI);
+          // context.fillStyle = color(showClusters ? d.cluster : "none");
+          // context.fill();
 
-          // If a node is in this list it will be grayed out
-          if (grayingOutList &&
-            grayingOutList[d.id]!==undefined) {
-            // console.log("globalAlpha" + grayedLevel);
-            context.globalAlpha = grayedLevel;
-            // console.log("globalAlpha");
-            // console.log(context.globalAlpha);
-          } else {
-            if (grayedOutList &&
-              grayedOutList[d.id]!==undefined) {
-              context.globalAlpha = 0.1; //final value
-            } else {
-               context.globalAlpha = 1;
-            }
+        }
 
-          }
+      }// drawNode
 
-
+      function drawPic(d) {
+        if (!HIDE_IMAGES) {
           context.save();
           context.beginPath();
-          context.arc(d.x + radius, d.y+radius, radius, 0, Math.PI * 2, true);
-          context.closePath();
+          context.arc(d.x + radius /2, d.y+radius /2, radius , 0, Math.PI * 2, true);
           context.clip();
 
           try {
-            context.drawImage(d.nodeImg, d.x, d.y, radius*2, radius*2);
+            context.drawImage(d.nodeImg, d.x - radius /2, d.y- radius /2, radius *2, radius *2);
           } catch (e) {
             console.error("Error drawing the image ");
             console.error(e);
           }
 
-
           context.beginPath();
-          context.arc(-radius, -radius, radius, 0, Math.PI * 2, true);
+          // context.arc(d.x+radius , d.y+radius , radius , 0, Math.PI * 2, true);
           context.clip();
+          // context.stroke();
+          // context.fill();
           context.closePath();
-          // context.restore();
-
-
-
-
-
-
+          context.restore();
         }
 
-
       }
+
+      // function drawNode(d) {
+      //   if (HIDE_IMAGES) {
+      //     context.moveTo(d.x + radius, d.y);
+      //     context.arc(d.x, d.y, radius, 0, 2 * Math.PI);
+      //   } else {
+
+      //     context.restore();
+      //     context.moveTo(d.x + radius, d.y+radius);
+      //     context.arc(d.x+radius, d.y+radius, radius+2, 0, 2 * Math.PI);
+      //     context.fillStyle = color(showClusters ? d.cluster : "none");
+      //     context.fill();
+
+
+
+      //     // If a node is in this list it will be grayed out
+      //     if (grayingOutList &&
+      //       grayingOutList[d.id]!==undefined) {
+      //       // console.log("globalAlpha" + grayedLevel);
+      //       context.globalAlpha = grayedLevel;
+      //       // console.log("globalAlpha");
+      //       // console.log(context.globalAlpha);
+      //     } else {
+      //       if (grayedOutList &&
+      //         grayedOutList[d.id]!==undefined) {
+      //         context.globalAlpha = 0.1; //final value
+      //       } else {
+      //          context.globalAlpha = 1;
+      //       }
+
+      //     }
+
+
+      //     context.save();
+      //     context.beginPath();
+      //     context.arc(d.x + radius, d.y+radius, radius, 0, Math.PI * 2, true);
+      //     context.closePath();
+      //     context.clip();
+
+      //     try {
+      //       context.drawImage(d.nodeImg, d.x, d.y, radius*2, radius*2);
+      //       context.clip();
+
+      //     } catch (e) {
+      //       console.error("Error drawing the image ");
+      //       console.error(e);
+      //     }
+
+
+      //     // context.beginPath();
+      //     // context.arc(-radius, -radius, radius, 0, Math.PI * 2, true);
+      //     context.clip();
+      //     // context.closePath();
+      //     // context.restore();
+      //   }
+      // } // drawNode
 
 
 
