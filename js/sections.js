@@ -8,7 +8,7 @@ var scrollVis = function() {
   "use strict";
   // constants to define the size
   // and margins of the vis area.
-  var width = 700;
+  var width = 900;
   var height = 520;
   var margin = {top:0, left:20, bottom:40, right:10};
 
@@ -36,13 +36,16 @@ var scrollVis = function() {
   var clusters = null;
 
   // Node's radius
-  var radius = 7;
+  var radius = 12;
+
+  // How many nodes does the grid have?
+  var GRID_SIZE = 5;
 
   // Colors for clusters
   var color = d3.scaleOrdinal(d3.schemeCategory20);
 
   // Should we show images
-  var HIDE_IMAGES = false;
+  var HIDE_IMAGES = true;
 
   // Should we show clusters?
   var showClusters = false;
@@ -115,13 +118,13 @@ var scrollVis = function() {
 
       simulation = d3.forceSimulation()
           // .force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.6).distance(100))
-          // .force("charge", d3.forceManyBody().strength(-1))
+          .force("charge", d3.forceManyBody().strength(-20))
           //Better than forceCenter because I can control the strength
 
-          .force("x", d3.forceX(width/2).strength(0.03))
-          .force("y", d3.forceY(height/2).strength(0.03))
+          .force("x", d3.forceX(width/2).strength(0.01))
+          .force("y", d3.forceY(height/2).strength(0.01))
           // .force("center", d3.forceCenter(width / 2, height / 2))
-          .force("collide", d3.forceCollide(radius+4).iterations(4))
+          .force("collide", d3.forceCollide(radius+2).iterations(4))
           // .force("forceX", d3.forceCenter(width / 2, height / 2));
           // .force("forceY", d3.forceCenter(width / 2, height / 2));
 
@@ -170,8 +173,8 @@ var scrollVis = function() {
         context.beginPath();
         if (chart.drawLinks) {
           simulation.force("link").links().forEach(drawLink);
-          context.strokeStyle = 'rgba(200,200,200,0.5)';
-          context.lineWidth = 0.5;
+          context.strokeStyle = 'rgba(200,200,200,0.9)';
+          context.lineWidth = 1.5;
           context.stroke();
         }
 
@@ -184,7 +187,9 @@ var scrollVis = function() {
           });
 
           // context.globalAlpha = 1.0;
-          simulation.nodes().forEach(drawPic);
+          if (!HIDE_IMAGES) {
+            simulation.nodes().forEach(drawPic);
+          }
 
 
         // simulation.nodes().forEach(drawNode);
@@ -345,15 +350,32 @@ var scrollVis = function() {
   };
 
   var setupData = function(graph) {
-    graph.nodes.forEach(function (d) {
-      d.nodeImg = new Image();
-      d.nodeImg.src = d.profile_image_url;
-      d.nodeImgData = null;
-      d.nodeImg.onload = function() {
-        // console.log("Loaded image" + d.profile_image_url);
-        d.nodeImgData = this;
+
+    // Load images
+    if (!HIDE_IMAGES) {
+      graph.nodes.forEach(function (d) {
+        d.nodeImg = new Image();
+        d.nodeImg.src = d.profile_image_url;
+        d.nodeImgData = null;
+        d.nodeImg.onload = function() {
+          // console.log("Loaded image" + d.profile_image_url);
+          d.nodeImgData = this;
+        }
+      });
+    }
+
+    // Build the grid
+    graph.links = [];
+    graph.nodes.forEach(function (d, i) {
+      if (i < graph.nodes.length - 1 && i % GRID_SIZE !== 0) {
+        graph.links.push({source: graph.nodes[i].id, target: graph.nodes[i+1].id });
+      }
+      if (i < graph.nodes.length - GRID_SIZE -1) {
+        graph.links.push({source: graph.nodes[i].id, target: graph.nodes[i + GRID_SIZE].id });
       }
     });
+
+
 
     // graph.nodes = graph.nodes.slice(0,1);
 
@@ -372,7 +394,7 @@ var scrollVis = function() {
    *
    */
   var setupSections = function() {
-    var STEPS = 23;
+    var STEPS = 6;
 
     var nothingFn = function () {};
     // activateFunctions are called each
@@ -380,34 +402,39 @@ var scrollVis = function() {
 
     var step = 0;
     activateFunctions[step++] = showTitle;
-    activateFunctions[step++] = showSubTitle;
-    activateFunctions[step++] = showInfluentials;
-    activateFunctions[step++] = showAllNodes;
-    activateFunctions[step++] = showLinks;
-
+    activateFunctions[step++] = showLonely;
+    activateFunctions[step++] = showGetTogether;
+    activateFunctions[step++] = showGrid;
     activateFunctions[step++] = nothingFn;
     activateFunctions[step++] = nothingFn;
-    activateFunctions[step++] = showLinks;
-    // Rank by importance
-    activateFunctions[step++] = selectInfluentials;
-    activateFunctions[step++] = selectNeighborhood;
+    // activateFunctions[step++] = showAllNodes;
 
-    activateFunctions[step++] = rankByImportance;
-    activateFunctions[step++] = showLinks;
-    // Compute clusters
-    activateFunctions[step++] = showClustersFn;
-    activateFunctions[step++] = forceInABox;
-    activateFunctions[step++] = hideInterClusters;
 
-    activateFunctions[step++] = hideInterClusters;
-    activateFunctions[step++] = jumpIntoCluster;
-    activateFunctions[step++] = showNodeNavigatorFn;
-    activateFunctions[step++] = egoCentricViews;
-    activateFunctions[step++] = pinNodes;
+    // activateFunctions[step++] = showLinks;
 
-    activateFunctions[step++] = expandNodes;
-    activateFunctions[step++] = nothingFn;
-    activateFunctions[step++] = nothingFn;
+    // activateFunctions[step++] = nothingFn;
+    // activateFunctions[step++] = nothingFn;
+    // activateFunctions[step++] = showLinks;
+    // // Rank by importance
+    // activateFunctions[step++] = selectInfluentials;
+    // activateFunctions[step++] = selectNeighborhood;
+
+    // activateFunctions[step++] = rankByImportance;
+    // activateFunctions[step++] = showLinks;
+    // // Compute clusters
+    // activateFunctions[step++] = showClustersFn;
+    // activateFunctions[step++] = forceInABox;
+    // activateFunctions[step++] = hideInterClusters;
+
+    // activateFunctions[step++] = hideInterClusters;
+    // activateFunctions[step++] = jumpIntoCluster;
+    // activateFunctions[step++] = showNodeNavigatorFn;
+    // activateFunctions[step++] = egoCentricViews;
+    // activateFunctions[step++] = pinNodes;
+
+    // activateFunctions[step++] = expandNodes;
+    // activateFunctions[step++] = nothingFn;
+    // activateFunctions[step++] = nothingFn;
 
     // egoCentricViews
     // updateFunctions are called while
@@ -419,8 +446,8 @@ var scrollVis = function() {
     for(var i = 0; i < STEPS; i++) {
       updateFunctions[i] = function() {};
     }
-    updateFunctions[7] = updateGrayed;
-    updateFunctions[8] = updateGrayed;
+    // updateFunctions[7] = updateGrayed;
+    // updateFunctions[8] = updateGrayed;
   };
 
 
@@ -499,25 +526,13 @@ function updateNodes(nodes) {
     context.textAlign="center";
     context.fillStyle = "black";
     context.font = "40px Arial";
-    context.fillText("NetViz in the Real World",width/2,height/2);
+    context.fillText("KADÁ",width/2,height/2);
     context.font = "38px Arial";
-    context.fillText("Lessons Learned",width/2,height/2+40);
+    context.fillText("Tejido + Comunidad",width/2,height/2+40);
 
     context.restore();
   }
 
-  function showSubTitle() {
-    simulation.stop();
-    context.clearRect(0, 0, width, height);
-    context.save();
-
-    context.textAlign="center";
-    context.fillStyle = "black";
-    context.font = "40px Arial";
-    context.fillText("IEEEVIS most followed",width/2,height/2);
-
-    context.restore();
-  }
 
   /**
    * showFillerTitle - filler counts
@@ -539,39 +554,64 @@ function updateNodes(nodes) {
   }
 
 
-  function showInfluentials () {
+  function showLonely () {
     if (!chart.graph) return;
     context.clearRect(0, 0, width, height);
     simulation.stop();
-    updateNodes(chart.graph.nodes.filter(function (d) { return d.influential === true; }));
-
-    simulation.force("link", function () {})
-    simulation.force("charge", function () {});
-    simulation.alphaTarget(0.1).restart();
-  }
-
-  function showAllNodes () {
-    if (!chart.graph) return;
-    simulation.stop();
     chart.drawLinks = false;
     updateNodes(chart.graph.nodes);
-    simulation.force("link", function () {});
-    simulation.force("charge", function () {})
-          .force("x", d3.forceX(width/2).strength(0.03))
-          .force("y", d3.forceY(height/2).strength(0.03))
 
+    simulation.force("link", function () {})
+      .force("charge", d3.forceManyBody().strength(-20))
+      .force("collide", d3.forceCollide(radius+3).iterations(4))
+      .force("x", d3.forceX(width/2).strength(0.01))
+      .force("y", d3.forceY(height/2).strength(0.01));
+
+
+    // simulation.force("charge", function () {});
     simulation.alphaTarget(0.1).restart();
   }
 
-  function showLinks () {
+  function showGetTogether () {
+    if (!chart.graph) return;
+    context.clearRect(0, 0, width, height);
+    simulation.stop();
+    chart.drawLinks = false;
+    // updateNodes(chart.graph.nodes.filter(function (d) { return d.influential === true; }));
+
+    simulation.force("link", function () {})
+    simulation.force("charge", function () {})
+      .force("collide", d3.forceCollide(radius+3).iterations(4))
+      .force("x", d3.forceX(width/2).strength(0.1))
+      .force("y", d3.forceY(height/2).strength(0.1));
+    simulation.alphaTarget(0.1).restart();
+  }
+
+
+
+  // function showAllNodes () {
+  //   if (!chart.graph) return;
+  //   simulation.stop();
+  //   chart.drawLinks = false;
+  //   updateNodes(chart.graph.nodes);
+  //   simulation.force("link", function () {});
+  //   simulation.force("charge", function () {})
+  //         .force("x", d3.forceX(width/2).strength(0.03))
+  //         .force("y", d3.forceY(height/2).strength(0.03))
+
+  //   simulation.alphaTarget(0.1).restart();
+  // }
+
+  function showGrid () {
     if (!chart.graph) return;
     simulation.stop();
     chart.drawLinks = true;
 
     context.fillStyle = "steelblue";
 
-    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.8).distance(150))
-          .force("charge", d3.forceManyBody().strength(-100));
+    simulation.force("link", d3.forceLink().id(function (d) { return d.id; } ).strength(0.9).distance(30))
+          .force("charge", d3.forceManyBody().strength(-50))
+          .force("collide", function () {});
 
     simulation
           .force("x", function () {})
@@ -693,7 +733,7 @@ function updateNodes(nodes) {
         return (d.source.cluster === d.target.cluster) ?
           0.1 :
           0.0001;
-      }).distance(150))
+      }).distance(30))
           .force("charge", d3.forceManyBody().strength(-50));
 
     updateNodes(getRankedNodes());
@@ -950,6 +990,9 @@ var display = function(mGraph) {
   console.log("Data loaded");
   // create a new plot and
   // display it
+
+  mGraph.nodes = mGraph.nodes.slice(0, 70);
+
   var plot = scrollVis();
   d3.select("#vis")
     .datum(mGraph)
